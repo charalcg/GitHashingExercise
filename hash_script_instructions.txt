@@ -1,0 +1,6 @@
+To run hash_script.sh (after chmod if necessary), type the following (example usage) :
+
+./hash_script.sh 0407
+
+The '0407' are the last 4 digits of my student ID (AEM). Replace them with your own
+student ID's last 4 digits. 

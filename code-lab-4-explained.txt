@@ -1,0 +1,228 @@
+Εξήγηση των includes των προγραμμάτων : 
+=> stdlib.h - είναι για την exit()
+
+
+=> unistd.h - είναι για τις fork(), execlp()
+
+
+=> sys/types.h - είναι για το typedef 'pid_t'
+
+
+=> sis/wait.h - είναι για την wait()
+
+
+=> signal.h - είναι για τα macros SIGINT, SIGTERM, κτλ. και για τη συνάρτηση signal()
+
+
+
+Γενική εξήγηση των processes : 
+Όπως λέει στο google : "A process is an instance of a program execution". Όταν δηλαδή πατάμε να τρέξει ένα πρόγραμμα, αυτό 
+που συμβαίνει στην πραγματικότητα είναι ότι ο υπολογιστής δημιουργεί ένα process, και "στέλνει" αυτό το process να εκτελέσει 
+το αρχείο που ζητήσαμε. Όταν ένα process συναντά μια εντολή fork(), τότε δημιουργείται και ένα δεύτερο process το οποίο 
+ξεκινάει να εκτελεί το ίδιο αρχείο κώδικα από την fork() και μετά. Επομένως από την fork() και μετά υπάρχουν δύο ενεργά 
+processes που εκτελούν το ίδιο πρόγραμμα. Το process που ξεκίνησε να εκτελεί το αρχείο είναι το parent process και το process 
+που δημιουργήθηκε κατά τη fork() είναι το child process. 
+
+Όταν κάνουμε pid = fork(), το child process διαβάζει pid = 0, ενώ το parent 
+process διαβάζει pid = [το process ID του child process]. 
+
+Αν καλέσω την εντολή getpid() όσο είμαι στο child process, θα πάρω την actual process ID που δίνει 
+το OS σε αυτήν, και το οποίο είναι ένας θετικός αριθμός (ο οποίος θα ταυτίζεται btw με την τιμή που "βλέπει" το parent 
+process για την μεταβλητή pid). Η εντολή getpid() επιστρέφει κάθε φορά το process ID (αυτό που δίνει το OS) του process που 
+την εκτελεί εκείνη τη δεδομένη στιγμή. Αν αυτό είναι το child process, η getpid() θα επιστρέψει το ID του child process. Αν 
+είναι το parent, θα επιστρέψει του parent(). Η εντολή getppid() επιστρέφει το ID του parent process του process που την εκτελεί 
+εκείνη τη στιγμή. 
+
+Με βάση αυτά θα εξηγήσω και όλα τα προγράμματα.
+
+
+Γενικό note : το ακόλουθο block κώδικα θα το συναντήσουμε πολλές φορές στα προγράμματα και γι' αυτό θα εξηγήσω εδώ μια 
+φορά τι κάνει και όχι κάθε φορά που το βλέπουμε : 
+if(myFunction(...) == -1){
+	.../whatever/...
+	exit(EXIT_FAILURE);
+}
+
+όπου myFunction(...) θα είναι είτε η signal() είτε η kill(), με τα αντίστοιχα ορίσματα κάθε φορά. Ο τρόπος που δουλεύει είναι ο εξής : 
+Αρχικά  εκτελείται η συνάρτηση μέσα στο if(). Αν η εκτέλεση είναι επιτυχής τότε το return value δεν θα είναι -1 και άρα δεν θα 
+εκτελεστεί το body του if, και απλώς θα συνεχίσει το πρόγραμμα, με την συνάρτηση όμως να έχει εκτελεστεί κιόλας (είναι δηλαδή απλά 
+efficient σύνταξη, θα μπορούσα να τρέχω τη συνάρτηση πριν από το if και να αποθηκεύω την τιμή της σε μια μεταβλητή, και μετά αυτή τη 
+μεταβλητή να την συγκρίνω με το -1 μέσα στο if, όμως έτσι είναι πιο compact). Αν η εκτέλεση της συνάρτησης είναι ανεπιτυχής τότε θα 
+εκτελεστεί το body του if και το process που το εκτελεί θα τερματίσει με τιμή που προβλέπεται από το macro EXIT_FAILURE. 
+
+
+
+
+
+------------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+=> Lab04 - example1.c :
+
+Εκτελούμε το πρόγραμμα στο bash. Το parent process ξεκινάει λοιπόν να εκτελεί το πρόγραμμα. Όταν φτάσει στην εντολή fork(), 
+δημιουργείται το child process. Από εκείνο το σημείο και μετά το parent και το child εκτελούν και τα δύο το πρόγραμμα, δηλαδή 
+γίνονται δύο ξεχωριστές εκτελέσεις του ίδιου προγράμματος. Το τι τιμή διαβάζει το κάθε process για την μεταβλητή pid εξηγήθηκε
+προηγουμένως. Αν η pid είναι αρνητική σημαίνει ότι η fork() απέτυχε να δημιουργήσει το child process και συνεπώς το πρόγραμμα 
+σταματάει με τιμή που προβλέπει το macro EXIT_FAILURE. To child process διαβάζει pid = 0 και για αυτό θα μπει στο if(pid == 0). 
+To parent process διαβάζει pid > 0 οπότε θα μπει στο else. To parent process τυπώνει το ID του και το ID του child και περιμένει 
+να τελειώσει την εκτέλεση το child process. Το child όταν μπαίνει στο δικό του if τυπώνει το ID του και το ID του parent και 
+εκτελεί την execlp. Η εντολή αυτή είναι για εκτέλεση οποιουδήποτε προγράμματος. Τα σενάρια εδώ είναι δύο : είτε η execlp θα αποτύχει, 
+οπότε θα εκτελεστεί η perror() και θα τυπωθεί το μύνημα λάθους, είτε θα εκτελεστεί η execlp, θα αγνοηθεί το perror, και όταν τελειώσει 
+η εκτέλεση της τελειώνει και η εκτέλεση του child process. Τότε το parent συνεχίζει την εκτέλεση, εκτελεί την τελευταία print μετά 
+το wait και τερματίζει κι εκείνο. 
+Γενικά δεν είναι standard το ποιο από τα δύο processes (parent ή child) θα εκτελεστεί πρώτο και ορίζεται από τον kernel, το wait 
+δηλαδή μπαίνει προληπτικά σε περίπτωση που το parent τελειώσει πρώτο. 
+
+
+Example usage output (local WSL shell):
+Parent Process: PID = 15532, Created Child PID = 15533
+Child Process: PID = 15533, Parent PID = 15532
+total 136
+-rw-r--r-- 1 charalamg charalamg   897 Dec 24 01:19 Lab04_example1.c
+-rw-r--r-- 1 charalamg charalamg   363 Dec 24 01:19 Lab04_example2.c
+-rw-r--r-- 1 charalamg charalamg   670 Dec 24 01:19 Lab04_example3.c
+-rw-r--r-- 1 charalamg charalamg   696 Dec 24 01:19 Lab04_example4.c
+-rw-r--r-- 1 charalamg charalamg  1685 Dec 24 01:20 Lab04_example5.c
+-rw-r--r-- 1 charalamg charalamg   805 Dec 18 17:34 Makefile.txt
+-rwxr-xr-x 1 charalamg charalamg 16312 Dec 24 02:21 example1
+-rwxr-xr-x 1 charalamg charalamg 16056 Dec 24 02:21 example2
+-rwxr-xr-x 1 charalamg charalamg 16264 Dec 24 02:21 example3
+-rwxr-xr-x 1 charalamg charalamg 16264 Dec 24 02:21 example4
+-rwxr-xr-x 1 charalamg charalamg 16432 Dec 24 02:22 example5
+-rw-r--r-- 1 charalamg charalamg 26830 Dec 24 00:59 programs_explanation.txt
+Parent Process: Child has terminated.
+
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+
+=> Lab04 - example2.c :
+
+Το πρόγραμμα αυτό απλώς τυπώνει, για το process που το εκτελεί εκείνη τη δεδομένη στιγμή, το ID του process (με getpid) 
+και το ID του parent αυτού του process (με getppid). Κάθε process έχει και ένα parent process πάντοτε.
+
+
+Example usage output (local WSL shell):
+Current Process ID (PID): 15636
+Parent Process ID (PPID): 15261
+
+
+
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+Lab04 - example3.c :
+
+Σε αυτό το πρόγραμμα ορίζουμε ένα user defined signal handler (ή αλλιώς custom signal handler), το οποίο ορίζει τι θα 
+γίνει όταν ο kernel "πιάσει" το σήμα SIGINT. Το κάνουμε register με το block :
+
+if(signal(SIGINT, signal_handler) == SIG_ERR){
+     perror("signal");
+     exit(EXIT_FAILURE);
+}
+
+Η λειτουργία αυτού του block εξηγήθηκε αναλυτικά προηγουμένως. 
+Στη συνέχεια τυπώνεται το ID του process που εκτελεί το πρόγραμμα εκείνη τη στιγμή και μπαίνουμε στο infinite loop. Το 
+πρόγραμμα θα τρέχει αιώνια μέχρι να πατήσουμε Ctrl+C, που τότε θα γίνει invoked ο δικός μας signal handler (αν φυσικά έγινε 
+registered επιτυχώς όπως εξηγήθηκε στην αρχή του αρχείου αυτού), και θα σταματήσει το πρόγραμμα. 
+
+
+Example usage output (local WSL shell):
+Process ID: 15643
+Press Ctrl+C to trigger SIGINT.
+Running... Press Ctrl+C to exit.
+Running... Press Ctrl+C to exit.
+Running... Press Ctrl+C to exit.
+^C
+Caught signal 2 (SIGINT). Exiting gracefully...
+
+
+
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+Lab04 - example4.c : 
+
+Είναι ίδιο με το example3.c με τη μόνη διαφορά ότι τώρα ο signal handler δεν τερματίζει το πρόγραμμα, απλώς τυπώνει το μύνημα που 
+γράφει ο κώδικας και συνεχίζει κανονικά η εκτέλεση. Αφού λοιπόν ακυρώσαμε το default behaviour για SIGINT (που είναι ο τερματισμός του 
+προγράμματος), και εφόσον η νέα συμπεριφορά που ορίσαμε για αυτό το σήμα (η signal_handler μας) δεν σταματάει το πρόγραμμα, δεν έχουμε 
+πια τρόπο να σταματήσουμε το πρόγραμμα με Ctrl+C
+
+Το πρόγραμμα όμως τυπώνει το process ID του process που το εκτελεί εκείνη τη στιγμή, επομένως μπορούμε να δούμε τι θα τυπωθεί και 
+στη συνέχεια να πατήσουμε Ctrl+Z (αυτό θα κάνει pause το πρόγραμμα). Στη συνέχεια μπορούμε να γράψουμε στο shell :  
+kill -9 pid
+όπου το pid είναι το process ID που τυπώθηκε. 
+
+
+Example usage output (local WSL shell):
+Process ID: 15656
+Press Ctrl+C to attempt to send SIGINT.
+Running... Try pressing Ctrl+C.
+Running... Try pressing Ctrl+C.
+Running... Try pressing Ctrl+C.
+^C
+Received SIGINT (signal 2), but ignoring it.
+Running... Try pressing Ctrl+C.
+Running... Try pressing Ctrl+C.
+Running... Try pressing Ctrl+C.
+^Z
+[1]+  Stopped                 ./example4
+
+Παταμε 'kill -9 15656' και μετα 'jobs' και παιρνουμε :
+[1]+  Killed                  ./example4
+
+
+
+
+-----------------------------------------------------------------------------------------------------------------------------
+
+
+
+
+
+Lab04 - example5.c
+
+Το πρόγραμμα αυτό έχει ίδια δομή με το example1.c απλά αλλάζει ο ορισμός του signal handler και τι γίνεται μέσα στα 
+if statements. Επομένως θα εξηγήσω απλώς τι κάνει το parent και το child process. Αν η fork αποτύχει, όπως εξηγήσαμε θα 
+είναι pid < 0 και άρα το πρόγραμμα θα τερματίσει λόγω του πρώτου if. 
+
+Όπως εξηγήσαμε το parent process πάει στο τελευταίο else και το child πάει στο else if (pid == 0). 
+
+Το child process κάνει register τον signal handler που έχουμε ορίσει για το σήμα SIGUSR1, τυπώνει το global ID του και μετά 
+περιμένει μέχρι να λάβει σήμα (μπαίνει στο infinite loop). 
+
+Το parent process τυπώνει το global ID του, περιμένει για 3 δευτερόλεπτα, και στέλνει το σήμα SIGUSR1 στο child process 
+μέσω της kill (η kill() είναι για να στέλνει ένα process σήμα σε ένα άλλο process, δίνοντας το ID του process που θέλει και το 
+σήμα που θέλει να στείλει. Υπενθυμίζεται ότι για το parent process η μεταβλητή pid έχει το global ID του child). Αν η 
+αποστολή του σήματος στο child αποτύχει, τερματίζει το πρόγραμμα. Αλλιώς το σήμα αποστέλλεται και το parent περιμένει το 
+child να κάνει catch το σήμα και να τερματίσει. Το child μόλις πιάσει το σήμα θα τερματίσει διότι θα γίνει invoked ο 
+sigusr1_handler, και τότε το parent θα συνεχίσει και θα τερματίσει κι εκείνο αφού εκτελέσει την τελευταία print.
+
+
+Example usage output (local WSL shell):
+Parent process ID: 15693. Child PID: 15694
+Child process ID: 15694. Waiting for SIGUSR1...
+Parent sending SIGUSR1 to child.
+Child received SIGUSR1 (signal 10).
+Parent sending SIGTERM to child.
+Child process terminated.
+
+Σε αυτο το προγραμμα ολα εγιναν handled απο τα ιδια τα processes και δεν χρειαζεται αρα να πατησουμε τιποτα στο keyboard
+
+
+
